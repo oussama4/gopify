@@ -11,8 +11,7 @@ import (
 
 // AuthorizationUrl returns a URL to shopify's consent page that asks for permissions
 // for the required scopes.
-func (g *Gopify) AuthorizationUrl(shop string) string {
-	state := uniqueToken(15)
+func (g *Gopify) AuthorizationUrl(shop string, state string) string {
 	query := url.Values{
 		"client_id":    {g.ApiKey},
 		"redirect_uri": {g.RedirectUrl},
