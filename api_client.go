@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 )
@@ -12,17 +11,20 @@ import (
 // shopify API client
 type Client struct {
 	domain      string
+	baseUrl     string
 	accessToken string
 	version     string
 	client      *http.Client
 }
 
 func NewClient(domain, accessToken, version string) *Client {
+	baseUrl := fmt.Sprintf("https://%s/admin/api/%s", domain, version)
 	client := http.Client{
 		Timeout: time.Second * 10,
 	}
 	api := &Client{
 		domain:      domain,
+		baseUrl:     baseUrl,
 		accessToken: accessToken,
 		version:     version,
 		client:      &client,
@@ -31,7 +33,8 @@ func NewClient(domain, accessToken, version string) *Client {
 	return api
 }
 
-func (c *Client) Request(method string, url string, body io.Reader) (map[string]interface{}, error) {
+func (c *Client) Request(method string, path string, body map[string]interface{}) (map[string]interface{}, error) {
+	u := fmt.Sprintf("%s/%s", c.baseUrl, path)
 	b, err := []byte(nil), error(nil)
 	if body != nil {
 		b, err = json.Marshal(&body)
@@ -39,7 +42,7 @@ func (c *Client) Request(method string, url string, body io.Reader) (map[string]
 			return nil, err
 		}
 	}
-	req, err := http.NewRequest(method, url, bytes.NewBuffer(b))
+	req, err := http.NewRequest(method, u, bytes.NewBuffer(b))
 	if err != nil {
 		return nil, err
 	}
@@ -61,19 +64,33 @@ func (c *Client) Request(method string, url string, body io.Reader) (map[string]
 }
 
 func (c *Client) Get(path string) (map[string]interface{}, error) {
-	resourceUrl := fmt.Sprintf("https://%s/admin/api/%s/%s", c.domain, c.version, path)
-	r, err := c.Request(http.MethodGet, resourceUrl, nil)
+	r, err := c.Request(http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
 	}
 	return r, nil
 }
 
-func (c *Client) Post(path string) (map[string]interface{}, error) {
-	resourceUrl := fmt.Sprintf("https://%s/admin/api/%s/%s", c.domain, c.version, path)
-	r, err := c.Request(http.MethodPost, resourceUrl, nil)
+func (c *Client) Post(path string, body map[string]interface{}) (map[string]interface{}, error) {
+	r, err := c.Request(http.MethodPost, path, body)
 	if err != nil {
 		return nil, err
 	}
 	return r, nil
+}
+
+func (c *Client) Put(path string, body map[string]interface{}) (map[string]interface{}, error) {
+	r, err := c.Request(http.MethodPut, path, body)
+	if err != nil {
+		return nil, err
+	}
+	return r, err
+}
+
+func (c *Client) Delete(path string) error {
+	_, err := c.Request(http.MethodDelete, path, nil)
+	if err != nil {
+		return err
+	}
+	return nil
 }
