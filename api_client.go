@@ -64,27 +64,15 @@ func (c *Client) Request(method string, path string, body map[string]interface{}
 }
 
 func (c *Client) Get(path string) (map[string]interface{}, error) {
-	r, err := c.Request(http.MethodGet, path, nil)
-	if err != nil {
-		return nil, err
-	}
-	return r, nil
+	return c.Request(http.MethodGet, path, nil)
 }
 
 func (c *Client) Post(path string, body map[string]interface{}) (map[string]interface{}, error) {
-	r, err := c.Request(http.MethodPost, path, body)
-	if err != nil {
-		return nil, err
-	}
-	return r, nil
+	return c.Request(http.MethodPost, path, body)
 }
 
 func (c *Client) Put(path string, body map[string]interface{}) (map[string]interface{}, error) {
-	r, err := c.Request(http.MethodPut, path, body)
-	if err != nil {
-		return nil, err
-	}
-	return r, err
+	return c.Request(http.MethodPut, path, body)
 }
 
 func (c *Client) Delete(path string) error {
@@ -93,4 +81,15 @@ func (c *Client) Delete(path string) error {
 		return err
 	}
 	return nil
+}
+
+// GraphqlQuery performs a graphql request to shopify admin api.
+func (c *Client) GraphqlQuery(query string, variables map[string]interface{}) (map[string]interface{}, error) {
+	body := map[string]interface{}{
+		"query": query,
+	}
+	if variables != nil {
+		body["variables"] = variables
+	}
+	return c.Request(http.MethodPost, "graphql.json", body)
 }
