@@ -1,3 +1,4 @@
+// gopify is a simple package for developing Shopify applications in Go
 package gopify
 
 import (
