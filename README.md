@@ -21,11 +21,11 @@
    - [Verify a webhook](#verify-a-webhook)
 
 
-### Usage
-#### Oauth
+## Usage
+### Oauth
 When developing a public or custom Shopify application you need to get an access token using oauth to use Shopify APIs.
 
-##### Start oauth process
+#### Start oauth process
 The first thing you nedd to do to use this package is to create a Gopify instance like the following:
 ```go
 app := &gopify.Gopify{
@@ -46,7 +46,7 @@ func startOauth(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-##### Oauth callback
+#### Oauth callback
 After Shopify authenticates your app, it will send a request to the redirect url that you provided to `gopify.Gopify{}` above. Now you can obtain an access token using `AccessToken` method.
 
 ```go
@@ -64,7 +64,7 @@ func oauthCallback(w http.ResponseWriter, r *http.Request) {
 ```
 
 
-#### API calls
+### API calls
 We can make calls to both Shopify APIs, REST and Graphql using the `Client` object provided by this package.
 
 ```go
@@ -81,7 +81,7 @@ client := gopify.NewClient("example.myshopify.com", "access token", gopify.WithV
 client := gopify.NewClient("example.myshopify.com", "access token", WithTimeout(20))
 ```
 
-##### REST
+#### REST
 ```go
 // Perform a Get request
 products, err := client.Get("products.json")
@@ -90,7 +90,7 @@ products, err := client.Get("products.json")
 _, err := client.Post("products.json", gopify.Body{})
 ```
 
-##### Graphql
+#### Graphql
 To send a Graphql query, we use the `Graphql` method defined in the api `Client` type.
 
 ```go
@@ -110,7 +110,7 @@ query := `
 products, nil := client.Graphql(query, nil)
 ```
 
-##### Rate limiting
+#### Rate limiting
 Shopify APIs are rate limited, so if that happens you can use the `WithRetry` option to specify how many times to retry a request.
 
 ```go
@@ -118,7 +118,7 @@ Shopify APIs are rate limited, so if that happens you can use the `WithRetry` op
 client := gopify.NewClient("example.myshopify.com", "access token", WithRetry(10))
 ```
 
-#### Session tokens
+### Session tokens
 If you are building an [embedded Shopify app](https://shopify.dev/apps/getting-started/app-types#embedded-apps) then you need to authenticate your app with [session tokens](https://shopify.dev/apps/auth/session-tokens).
 
 This package provides you with facilities for decoding a session token and extracting its payload, and also a way to verify the authenticity of the token.
@@ -133,8 +133,8 @@ err := app.VerifyTokenSignature("token")
 
 There is also a higher level way to verify the authenticity of token using the [VerifyToken](https://pkg.go.dev/github.com/oussama4/gopify#Gopify.VerifyToken) http middleware.
 
-#### Verify a Shopify request
+### Verify a Shopify request
 To verify the authenticity of the request from Shopify we can verify the signature of a hmac parameter included in every request from shopify using [VerifyRequest](https://pkg.go.dev/github.com/oussama4/gopify#Gopify.VerifyRequest) http middleware.
 
-#### Verify a webhook
+### Verify a webhook
 To verify that a webhook request is from Shopify we can use [VerifyWebhook](https://pkg.go.dev/github.com/oussama4/gopify#Gopify.VerifyWebhook) function.
