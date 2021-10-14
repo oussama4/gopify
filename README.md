@@ -15,10 +15,10 @@
    - [API calls](#api-calls)
 	 - [REST](#rest)
 	 - [Graphql](#graphql)
-	 - [Rate limiting](#rate-limit)
-   - [Session tokens](#session-token)
-   - [Verify a Shopify request](#verify-request)
-   - [Verify a webhook](#verify-webhook)
+	 - [Rate limiting](#rate-limiting)
+   - [Session tokens](#session-tokens)
+   - [Verify a Shopify request](#verify-a-shopify-request)
+   - [Verify a webhook](#verify-a-webhook)
 
 
 ### Usage
