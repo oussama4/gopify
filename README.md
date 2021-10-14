@@ -10,7 +10,7 @@
 
  - [Usage](#usage)
    - [Oauth](#oauth)
-	 - [Start oauth process](#start-oauth)
+	 - [Start oauth process](#start-oauth-process)
 	 - [Oauth callback](#oauth-callback)
    - [API calls](#api-calls)
 	 - [REST](#rest)
