@@ -26,7 +26,7 @@
 When developing a public or custom Shopify application you need to get an access token using oauth to use Shopify APIs.
 
 #### Start oauth process
-The first thing you nedd to do to use this package is to create a Gopify instance like the following:
+The first thing you need to do to use this package is to create a Gopify instance like the following:
 ```go
 app := &gopify.Gopify{
 		ApiKey:      "key",
