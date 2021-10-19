@@ -21,6 +21,15 @@ var (
 	ErrRateLimit = errors.New("API rate limit exeeded")
 )
 
+// GraphqlErr is a general graphql error
+type GraphqlError struct {
+	msg string
+}
+
+func (err GraphqlError) Error() string {
+	return err.msg
+}
+
 // Option is for configuring the Api client
 type Option func(c *Client)
 
@@ -146,18 +155,18 @@ func (c *Client) rest(method string, path string, body Body) (Body, error) {
 }
 
 // checks if a graphql response has a rate limit error and return it if exists
-func (c *Client) rateLimitError(errors []interface{}) error {
+func (c *Client) rateLimitError(errors []interface{}) bool {
 	for _, err := range errors {
 		if ext, ok := err.(map[string]interface{}); ok {
 			if e, ok := ext["extensions"].(map[string]interface{}); ok {
 				code, ok := e["code"].(string)
 				if ok && (code == "MAX_COST_EXCEEDED" || code == "THROTTLED") {
-					return ErrRateLimit
+					return true
 				}
 			}
 		}
 	}
-	return nil
+	return false
 }
 
 // get the current available rate limit from the graphql response
@@ -198,13 +207,17 @@ func (c *Client) graphql(body Body) (Body, error) {
 		// handle errors
 		if e, ok := result["errors"]; ok {
 			errs := e.([]interface{})
-			err := c.rateLimitError(errs)
-			if t == c.tries {
-				return nil, ErrRateLimit
-			}
-			if err != nil {
+			// rate limit error
+			if c.rateLimitError(errs) {
+				if t == c.tries {
+					return nil, ErrRateLimit
+				}
 				time.Sleep(2 * time.Second)
 				continue
+			} else {
+				if errMessage, ok := errs[0].(map[string]interface{})["message"].(string); ok {
+					return nil, GraphqlError{msg: errMessage}
+				}
 			}
 		}
 
