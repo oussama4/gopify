@@ -71,14 +71,12 @@ type Client struct {
 // Create a new shopify Api client
 // the domain parameter is the shop domain
 func NewClient(domain, accessToken string, opts ...Option) *Client {
-	baseUrl := fmt.Sprintf("https://%s/admin/api/%s", domain, defaultApiVersion)
 	client := http.Client{
 		Timeout: defaultTimeout,
 	}
 	c := &Client{
 		client:         &client,
 		domain:         domain,
-		baseUrl:        baseUrl,
 		accessToken:    accessToken,
 		version:        defaultApiVersion,
 		tries:          defaultRetries,
@@ -88,6 +86,8 @@ func NewClient(domain, accessToken string, opts ...Option) *Client {
 	for _, opt := range opts {
 		opt(c)
 	}
+	baseUrl := fmt.Sprintf("https://%s/admin/api/%s", domain, c.version)
+	c.baseUrl = baseUrl
 
 	return c
 }
