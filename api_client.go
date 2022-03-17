@@ -55,7 +55,7 @@ func WithRetry(tries int) Option {
 }
 
 // Body is an API request/response body
-type Body map[string]interface{}
+type Body map[string]any
 
 // shopify API client
 type Client struct {
@@ -117,7 +117,7 @@ func (c *Client) rest(method string, path string, body Body) (Body, error) {
 	if err != nil {
 		return nil, err
 	}
-	result := make(map[string]interface{})
+	result := make(map[string]any)
 
 	for t := 1; t <= c.tries; t++ {
 		res, err := c.client.Do(req)
@@ -155,10 +155,10 @@ func (c *Client) rest(method string, path string, body Body) (Body, error) {
 }
 
 // checks if a graphql response has a rate limit error and return it if exists
-func (c *Client) rateLimitError(errors []interface{}) bool {
+func (c *Client) rateLimitError(errors []any) bool {
 	for _, err := range errors {
-		if ext, ok := err.(map[string]interface{}); ok {
-			if e, ok := ext["extensions"].(map[string]interface{}); ok {
+		if ext, ok := err.(map[string]any); ok {
+			if e, ok := ext["extensions"].(map[string]any); ok {
 				code, ok := e["code"].(string)
 				if ok && (code == "MAX_COST_EXCEEDED" || code == "THROTTLED") {
 					return true
@@ -170,9 +170,9 @@ func (c *Client) rateLimitError(errors []interface{}) bool {
 }
 
 // get the current available rate limit from the graphql response
-func (c *Client) graphqlAvailableLimit(extentions map[string]interface{}) int {
-	if cost, ok := extentions["cost"].(map[string]interface{}); ok {
-		if throttleStatus, ok := cost["throttleStatus"].(map[string]interface{}); ok {
+func (c *Client) graphqlAvailableLimit(extentions map[string]any) int {
+	if cost, ok := extentions["cost"].(map[string]any); ok {
+		if throttleStatus, ok := cost["throttleStatus"].(map[string]any); ok {
 			if currentlyAvailable, ok := throttleStatus["currentlyAvailable"].(float64); ok {
 				return int(currentlyAvailable)
 			}
@@ -198,7 +198,7 @@ func (c *Client) graphql(body Body) (Body, error) {
 		if res.StatusCode != http.StatusOK {
 			return nil, fmt.Errorf("unexpected server response: %s", res.Status)
 		}
-		result := make(map[string]interface{})
+		result := make(map[string]any)
 		dec := json.NewDecoder(res.Body)
 		if err := dec.Decode(&result); err != nil {
 			return nil, err
@@ -206,7 +206,7 @@ func (c *Client) graphql(body Body) (Body, error) {
 
 		// handle errors
 		if e, ok := result["errors"]; ok {
-			errs := e.([]interface{})
+			errs := e.([]any)
 			// rate limit error
 			if c.rateLimitError(errs) {
 				if t == c.tries {
@@ -215,7 +215,7 @@ func (c *Client) graphql(body Body) (Body, error) {
 				time.Sleep(2 * time.Second)
 				continue
 			} else {
-				if errMessage, ok := errs[0].(map[string]interface{})["message"].(string); ok {
+				if errMessage, ok := errs[0].(map[string]any)["message"].(string); ok {
 					return nil, GraphqlError{msg: errMessage}
 				}
 			}
@@ -223,7 +223,7 @@ func (c *Client) graphql(body Body) (Body, error) {
 
 		// check available rate limit
 		if e, ok := result["extensions"]; ok {
-			l := c.graphqlAvailableLimit(e.(map[string]interface{}))
+			l := c.graphqlAvailableLimit(e.(map[string]any))
 			if l != -1 {
 				c.availableLimit = l
 			}
@@ -232,7 +232,7 @@ func (c *Client) graphql(body Body) (Body, error) {
 			time.Sleep(2 * time.Second)
 			continue
 		}
-		return result["data"].(map[string]interface{}), nil
+		return result["data"].(map[string]any), nil
 	}
 	return nil, nil
 }
@@ -262,8 +262,8 @@ func (c *Client) Delete(path string) error {
 }
 
 // Graphql sends a graphql query to shopify admin api.
-func (c *Client) Graphql(query string, variables map[string]interface{}) (Body, error) {
-	body := map[string]interface{}{
+func (c *Client) Graphql(query string, variables map[string]any) (Body, error) {
+	body := map[string]any{
 		"query": query,
 	}
 	if variables != nil {
