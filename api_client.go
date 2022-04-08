@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -92,16 +93,22 @@ func NewClient(domain, accessToken string, opts ...Option) *Client {
 	return c
 }
 
-func (c *Client) newRequest(method string, path string, body Body) (*http.Request, error) {
-	u := fmt.Sprintf("%s/%s", c.baseUrl, path)
+func (c *Client) newRequest(method string, path string, queryParams url.Values, requestBody any) (*http.Request, error) {
+	u, err := url.Parse(fmt.Sprintf("%s/%s", c.baseUrl, path))
+	if err != nil {
+		return nil, err
+	}
+	if queryParams != nil {
+		u.RawQuery = queryParams.Encode()
+	}
 	b, err := []byte(nil), error(nil)
-	if body != nil {
-		b, err = json.Marshal(&body)
+	if requestBody != nil {
+		b, err = json.Marshal(&requestBody)
 		if err != nil {
 			return nil, err
 		}
 	}
-	req, err := http.NewRequest(method, u, bytes.NewBuffer(b))
+	req, err := http.NewRequest(method, u.String(), bytes.NewBuffer(b))
 	if err != nil {
 		return nil, err
 	}
@@ -111,25 +118,25 @@ func (c *Client) newRequest(method string, path string, body Body) (*http.Reques
 	return req, nil
 }
 
-func (c *Client) rest(method string, path string, body Body) (Body, error) {
+func (c *Client) rest(method string, path string, queryParams url.Values, requestBody any, responseBody any) error {
 	threshold := 2 // rate limit threshold
-	req, err := c.newRequest(method, path, body)
+	req, err := c.newRequest(method, path, queryParams, requestBody)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	result := make(map[string]any)
+	var res *http.Response
 
 	for t := 1; t <= c.tries; t++ {
-		res, err := c.client.Do(req)
+		res, err = c.client.Do(req)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		defer res.Body.Close()
 
 		if res.StatusCode == http.StatusTooManyRequests {
 			retryAfter := res.Header.Get("Retry-After")
 			if t == c.tries {
-				return nil, ErrRateLimit
+				return ErrRateLimit
 			}
 			r, _ := strconv.Atoi(retryAfter)
 			time.Sleep(time.Second * time.Duration(r))
@@ -147,11 +154,11 @@ func (c *Client) rest(method string, path string, body Body) (Body, error) {
 			continue
 		}
 
-		if err := json.NewDecoder(res.Body).Decode(&result); err != nil {
-			return nil, err
+		if err := json.NewDecoder(res.Body).Decode(&responseBody); err != nil {
+			return err
 		}
 	}
-	return result, nil
+	return nil
 }
 
 // checks if a graphql response has a rate limit error and return it if exists
@@ -183,7 +190,7 @@ func (c *Client) graphqlAvailableLimit(extentions map[string]any) int {
 
 func (c *Client) graphql(body Body) (Body, error) {
 	threshold := 50
-	req, err := c.newRequest(http.MethodPost, "graphql.json", body)
+	req, err := c.newRequest(http.MethodPost, "graphql.json", nil, body)
 	if err != nil {
 		return nil, err
 	}
@@ -238,27 +245,23 @@ func (c *Client) graphql(body Body) (Body, error) {
 }
 
 // Get performs a get request and returns the result
-func (c *Client) Get(path string) (Body, error) {
-	return c.rest(http.MethodGet, path, nil)
+func (c *Client) Get(path string, queryParams url.Values, responseBody any) error {
+	return c.rest(http.MethodGet, path, queryParams, nil, responseBody)
 }
 
 // post performs a post request and returns the result
-func (c *Client) Post(path string, body Body) (Body, error) {
-	return c.rest(http.MethodPost, path, body)
+func (c *Client) Post(path string, requestBody any, responseBody any) error {
+	return c.rest(http.MethodPost, path, nil, requestBody, requestBody)
 }
 
 // Put performs a put request and returns the result
-func (c *Client) Put(path string, body Body) (Body, error) {
-	return c.rest(http.MethodPut, path, body)
+func (c *Client) Put(path string, requestBody any, responseBody any) error {
+	return c.rest(http.MethodPut, path, nil, requestBody, responseBody)
 }
 
 // Delete performs a delete request
 func (c *Client) Delete(path string) error {
-	_, err := c.rest(http.MethodDelete, path, nil)
-	if err != nil {
-		return err
-	}
-	return nil
+	return c.rest(http.MethodDelete, path, nil, nil, nil)
 }
 
 // Graphql sends a graphql query to shopify admin api.
