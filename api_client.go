@@ -40,6 +40,10 @@ func (err GraphqlError) Error() string {
 	return err.msg
 }
 
+type RestResponse struct {
+	Headers http.Header
+}
+
 // Option is for configuring the Api client
 type Option func(c *Client)
 
@@ -127,25 +131,25 @@ func (c *Client) newRequest(method string, path string, queryParams url.Values, 
 	return req, nil
 }
 
-func (c *Client) rest(method string, path string, queryParams url.Values, requestBody any, responseBody any) error {
+func (c *Client) rest(method string, path string, queryParams url.Values, requestBody any, responseBody any) (*RestResponse, error) {
 	threshold := 2 // rate limit threshold
 	req, err := c.newRequest(method, path, queryParams, requestBody)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	var res *http.Response
 
 	for t := 1; t <= c.tries; t++ {
 		res, err = c.client.Do(req)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		defer res.Body.Close()
 
 		if res.StatusCode == http.StatusTooManyRequests {
 			retryAfter := res.Header.Get("Retry-After")
 			if t == c.tries {
-				return ErrRateLimit
+				return nil, ErrRateLimit
 			}
 			r, _ := strconv.Atoi(retryAfter)
 			time.Sleep(time.Second * time.Duration(r))
@@ -153,7 +157,7 @@ func (c *Client) rest(method string, path string, queryParams url.Values, reques
 		}
 
 		if res.StatusCode >= http.StatusMultipleChoices {
-			return parseResponseError(res)
+			return nil, parseResponseError(res)
 		}
 
 		limit := res.Header.Get("X-Shopify-Shop-Api-Call-Limit")
@@ -168,9 +172,12 @@ func (c *Client) rest(method string, path string, queryParams url.Values, reques
 		}
 	}
 	if err := json.NewDecoder(res.Body).Decode(&responseBody); err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	restResponse := &RestResponse{
+		Headers: res.Header,
+	}
+	return restResponse, nil
 }
 
 func parseResponseError(res *http.Response) error {
@@ -270,22 +277,22 @@ func (c *Client) graphql(body Body) (Body, error) {
 }
 
 // Get performs a get request and returns the result
-func (c *Client) Get(path string, queryParams url.Values, responseBody any) error {
+func (c *Client) Get(path string, queryParams url.Values, responseBody any) (*RestResponse, error) {
 	return c.rest(http.MethodGet, path, queryParams, nil, responseBody)
 }
 
 // post performs a post request and returns the result
-func (c *Client) Post(path string, requestBody any, responseBody any) error {
+func (c *Client) Post(path string, requestBody any, responseBody any) (*RestResponse, error) {
 	return c.rest(http.MethodPost, path, nil, requestBody, requestBody)
 }
 
 // Put performs a put request and returns the result
-func (c *Client) Put(path string, requestBody any, responseBody any) error {
+func (c *Client) Put(path string, requestBody any, responseBody any) (*RestResponse, error) {
 	return c.rest(http.MethodPut, path, nil, requestBody, responseBody)
 }
 
 // Delete performs a delete request
-func (c *Client) Delete(path string) error {
+func (c *Client) Delete(path string) (*RestResponse, error) {
 	return c.rest(http.MethodDelete, path, nil, nil, nil)
 }
 
