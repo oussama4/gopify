@@ -41,7 +41,8 @@ func (err GraphqlError) Error() string {
 }
 
 type RestResponse struct {
-	Headers http.Header
+	Headers    http.Header
+	Pagination *Pagination
 }
 
 // Option is for configuring the Api client
@@ -278,7 +279,16 @@ func (c *Client) graphql(body Body) (Body, error) {
 
 // Get performs a get request and returns the result
 func (c *Client) Get(path string, queryParams url.Values, responseBody any) (*RestResponse, error) {
-	return c.rest(http.MethodGet, path, queryParams, nil, responseBody)
+	r, err := c.rest(http.MethodGet, path, queryParams, nil, responseBody)
+	if err != nil {
+		return nil, err
+	}
+	pagination, err := extractPagination(r.Headers.Get("Link"))
+	if err != nil {
+		return nil, err
+	}
+	r.Pagination = pagination
+	return r, nil
 }
 
 // post performs a post request and returns the result
