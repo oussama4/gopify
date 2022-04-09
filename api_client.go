@@ -22,6 +22,15 @@ var (
 	ErrRateLimit = errors.New("API rate limit exeeded")
 )
 
+// ResponseError represnts any Shopify REST API response error
+type ResponseError struct {
+	Errors any
+}
+
+func (err ResponseError) Error() string {
+	return fmt.Sprintf("%v", err.Errors)
+}
+
 // GraphqlErr is a general graphql error
 type GraphqlError struct {
 	msg string
@@ -143,6 +152,10 @@ func (c *Client) rest(method string, path string, queryParams url.Values, reques
 			continue
 		}
 
+		if res.StatusCode >= http.StatusMultipleChoices {
+			return parseResponseError(res)
+		}
+
 		limit := res.Header.Get("X-Shopify-Shop-Api-Call-Limit")
 		s := strings.Split(limit, "/")
 		bucketSize, _ := strconv.Atoi(s[1])
@@ -153,12 +166,24 @@ func (c *Client) rest(method string, path string, queryParams url.Values, reques
 			time.Sleep(time.Second * 2)
 			continue
 		}
-
-		if err := json.NewDecoder(res.Body).Decode(&responseBody); err != nil {
-			return err
-		}
+	}
+	if err := json.NewDecoder(res.Body).Decode(&responseBody); err != nil {
+		return err
 	}
 	return nil
+}
+
+func parseResponseError(res *http.Response) error {
+	var responseError ResponseError
+	if err := json.NewDecoder(res.Body).Decode(&responseError); err != nil {
+		return err
+	}
+	b, err := json.MarshalIndent(responseError.Errors, "", "    ")
+	if err != nil {
+		return err
+	}
+	responseError.Errors = string(b)
+	return responseError
 }
 
 // checks if a graphql response has a rate limit error and return it if exists
