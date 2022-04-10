@@ -75,19 +75,31 @@ We can can also pass other options to NewClient like the API version, http timeo
 
 ```go
 // We can use WithVersion to specify which API version
-client := gopify.NewClient("example.myshopify.com", "access token", gopify.WithVersion("2021-10"))
+client := gopify.NewClient("example.myshopify.com", "access token", gopify.WithVersion("2022-04"))
 
-// Use WithTimeout to set a custom http timeout instead 10 seconds
+// Use WithTimeout to set a custom http timeout instead of 10 seconds
 client := gopify.NewClient("example.myshopify.com", "access token", WithTimeout(20))
 ```
 
 #### REST
 ```go
-// Perform a Get request
-products, err := client.Get("products.json")
+// Get a list of 10 products
+products := []struct {
+	Title string
+}{}
+queryParams := url.Values{
+                "limit": {"10"},
+        }
+_, err := client.Get("products.json", queryParams, &products)
 
-// Perform a Post request
-_, err := client.Post("products.json", gopify.Body{})
+// Create a product
+product := struct {
+		Title string
+	}{
+		Title: "default",
+	}
+responseBody := map[string]any{}
+_, err := client.Post("products.json", product, &responseBody)
 ```
 
 #### Graphql
