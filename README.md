@@ -88,16 +88,16 @@ products := []struct {
 	Title string
 }{}
 queryParams := url.Values{
-                "limit": {"10"},
-        }
+	"limit": {"10"},
+}
 _, err := client.Get("products.json", queryParams, &products)
 
 // Create a product
 product := struct {
-		Title string
-	}{
-		Title: "default",
-	}
+	Title string
+}{
+	Title: "default",
+}
 responseBody := map[string]any{}
 _, err := client.Post("products.json", product, &responseBody)
 ```
