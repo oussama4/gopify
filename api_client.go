@@ -162,10 +162,11 @@ func (c *Client) rest(method string, path string, queryParams url.Values, reques
 		}
 
 		limit := res.Header.Get("X-Shopify-Shop-Api-Call-Limit")
-		s := strings.Split(limit, "/")
-		bucketSize, _ := strconv.Atoi(s[1])
-		requestCount, _ := strconv.Atoi(s[0])
-		c.availableLimit = bucketSize - requestCount
+		if s := strings.Split(limit, "/"); len(s) == 2 {
+			bucketSize, _ := strconv.Atoi(s[1])
+			requestCount, _ := strconv.Atoi(s[0])
+			c.availableLimit = bucketSize - requestCount
+		}
 
 		if c.availableLimit < threshold {
 			time.Sleep(time.Second * 2)
